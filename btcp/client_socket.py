@@ -329,6 +329,14 @@ class BTCPClientSocket(BTCPSocket):
 
             segment = header + message
 
+            checksum = super().in_cksum(segment)
+            header = super().build_segment_header(
+                    self.sequence_number, self.ack_number,
+                    syn_set=False, ack_set=False, fin_set=False,
+                    window=0x01, length=len(message), checksum=checksum)
+                    
+            segment = header + message
+
             # Add segment to buffer
             self.send_buffer.put(segment)
 

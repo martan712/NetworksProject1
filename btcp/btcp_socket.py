@@ -29,9 +29,8 @@ class BTCPSocket:
         self._window = window
         self._timeout = timeout
 
-
     @staticmethod
-    def in_cksum(segment):
+    def in_cksum(buffer):
         """Compute the internet checksum of the segment given as argument.
         Consult lecture 3 for details.
 
@@ -41,28 +40,24 @@ class BTCPSocket:
         segment, the checksum field in the header should be set to 0x0000, and
         then the resulting checksum should be put in its place.
         """
-        if not segment or len(segment)<10:
+        # Signal nonsensical request (checksum of nothing?) with 0x0000
+        if not buffer:
             return 0x0000
 
-        buffer = segment[:10]
+        # Pad to an even number of bytes
+        buffer += len(buffer) % 2 * b'\x00'
 
-        oc = 0x0000
-        
-        i = 0
-        while i < len(buffer):
-            num = buffer[i]*pow(2,8)
+        # Sum the entire run as 16-bit integers in network byte order.
+        acc = sum(x for (x,) in struct.iter_unpack(R'!H', buffer))
 
-            if(i+1 < len(buffer)):
-                num+=buffer[i+1]
+        # (Repeatedly) carry the overflow around until it fits in 16 bits.
+        while acc > 0xFFFF:
+            carry = acc >> 16
+            acc &= 0xFFFF
+            acc += carry
 
-            oc = ones_comp_add(oc, num) 
-
-            i+=2
-        
-        if oc == 65535 or oc == 0:
-            return 65535
-        
-        return oc ^ 65535
+        # Return the binary inverse except when the result is 0xFFFF
+        return acc if acc == 0xFFFF else (~acc & 0xFFFF)
 
 
     @staticmethod
