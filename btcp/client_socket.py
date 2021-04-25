@@ -86,7 +86,7 @@ class BTCPClientSocket(BTCPSocket):
             #print(f"sent {sequence_number}")   
 
     def next_sequence_nr(self, sequence_nr):
-        if sequence_nr < 65535:
+        if sequence_nr < 65534:
             return sequence_nr+1
         else:
             return 0
@@ -145,7 +145,7 @@ class BTCPClientSocket(BTCPSocket):
             if (flag_bits[1] == "1"):
                 #print(f"received ack nr {acknowledgement_number} with current own ack = {self.ack_number}")
                 # If ACK_server > ACK_client
-                if (acknowledgement_number > self.ack_number):
+                if (acknowledgement_number >= self.next_sequence_nr(self.ack_number)):
                     # Remove those that can be removed and update ACK_client
                     self.unacked_list = self.unacked_list[(acknowledgement_number - self.ack_number):]
                     self.ack_number=acknowledgement_number
@@ -333,7 +333,7 @@ class BTCPClientSocket(BTCPSocket):
             self.send_buffer.put(segment)
 
             # Increase sequence number
-            self.sequence_number += 1
+            self.sequence_number = self.next_sequence_nr(self.sequence_number)
     
         while (self.send_buffer.qsize() > 0):
             time.sleep(0.1)

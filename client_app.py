@@ -38,7 +38,7 @@ def btcp_file_transfer_client():
     # Create a bTCP client socket with the given window size and timeout value
     s = BTCPClientSocket(args.window, args.timeout)
     s.connect()
-    f = open("testdata3.txt")
+    f = open("../large_input.py")
     s.send(f)
     s.shutdown()
     # TODO Write your file transfer client code using your implementation of
