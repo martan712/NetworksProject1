@@ -117,6 +117,7 @@ class BTCPServerSocket(BTCPSocket):
                 self._lossy_layer.send_segment(ACK)
                 self.ack_number = 0
         else:
+            print("checksum failed")
             self._lossy_layer.send_segment(ACK)
 
     ###########################################################################

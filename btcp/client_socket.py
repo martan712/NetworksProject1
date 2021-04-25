@@ -2,7 +2,7 @@ from btcp.btcp_socket import BTCPSocket, BTCPStates
 from btcp.lossy_layer import LossyLayer
 from btcp.constants import *
 
-import os
+import io
 import time
 from queue import Queue
 
@@ -321,28 +321,34 @@ class BTCPClientSocket(BTCPSocket):
                     syn_set=False, ack_set=False, fin_set=False,
                     window=0x01, length=len(message), checksum=0)
 
-            message = bytes(message, 'utf-8')
+            message = bytearray(message, 'utf-8')
 
             # Padding
             if( len(message) < 1008 ):
                 message = message + b"0"*(1008-len(message) )
+            
+            segment = io.BytesIO()
+            segment.write(header)
+            segment.write(message)
+            #segment = header + message
 
-            segment = header + message
-
-            checksum = super().in_cksum(segment)
+            checksum = super().in_cksum(segment.getvalue())
+            
             header = super().build_segment_header(
                     self.sequence_number, self.ack_number,
                     syn_set=False, ack_set=False, fin_set=False,
                     window=0x01, length=len(message), checksum=checksum)
-                    
-            segment = header + message
+
+            segment = io.BytesIO()
+            segment.write(header)
+            segment.write(message)
 
             # Add segment to buffer
-            self.send_buffer.put(segment)
+            self.send_buffer.put(segment.getvalue())
 
             # Increase sequence number
             self.sequence_number = self.next_sequence_nr(self.sequence_number)
-    
+
         while (self.send_buffer.qsize() > 0):
             time.sleep(0.1)
             continue
