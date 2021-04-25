@@ -315,33 +315,41 @@ class BTCPClientSocket(BTCPSocket):
             if len(message) == 0: 
                 break
             
-            # Create segment
-            header = super().build_segment_header(
-                    self.sequence_number, self.ack_number,
-                    syn_set=False, ack_set=False, fin_set=False,
-                    window=0x01, length=len(message), checksum=0)
-
             message = bytearray(message, 'utf-8')
 
             # Padding
             if( len(message) < 1008 ):
-                message = message + b"0"*(1008-len(message) )
-            
+                message = message + b'\x00'*(1008-len(message) )
+
+            # Keep ack
+            thisack = self.ack_number
+
+            # Create segment
+            header = super().build_segment_header(
+                    self.sequence_number, thisack,
+                    syn_set=False, ack_set=False, fin_set=False,
+                    window=0x01, length=len(message), checksum=0)
+
             segment = io.BytesIO()
             segment.write(header)
             segment.write(message)
-            #segment = header + message
+            
 
             checksum = super().in_cksum(segment.getvalue())
             
-            header = super().build_segment_header(
-                    self.sequence_number, self.ack_number,
+            header2 = super().build_segment_header(
+                    self.sequence_number, thisack,
                     syn_set=False, ack_set=False, fin_set=False,
                     window=0x01, length=len(message), checksum=checksum)
-
+            
             segment = io.BytesIO()
-            segment.write(header)
+            segment.write(header2)
             segment.write(message)
+
+            if (super().in_cksum(segment.getvalue()) != 0xFFFF):
+                print(header)
+                print(header2)
+                print("WTFF!!!!!")
 
             # Add segment to buffer
             self.send_buffer.put(segment.getvalue())
@@ -349,6 +357,7 @@ class BTCPClientSocket(BTCPSocket):
             # Increase sequence number
             self.sequence_number = self.next_sequence_nr(self.sequence_number)
 
+            print("done adding to buffer")
         while (self.send_buffer.qsize() > 0):
             time.sleep(0.1)
             continue

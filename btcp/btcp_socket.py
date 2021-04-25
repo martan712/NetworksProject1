@@ -44,6 +44,8 @@ class BTCPSocket:
         if not buffer:
             return 0x0000
 
+        buffer += len(buffer) % 2 * b'\x00'
+
         # Sum the entire run as 16-bit integers in network byte order.
         acc = sum(x for (x,) in struct.iter_unpack(R'!H', buffer))
 
