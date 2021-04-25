@@ -24,7 +24,7 @@ def btcp_file_transfer_server():
     parser = argparse.ArgumentParser()
     parser.add_argument("-w", "--window",
                         help="Define bTCP window size",
-                        type=int, default=100)
+                        type=int, default=70)
     parser.add_argument("-t", "--timeout",
                         help="Define bTCP timeout in milliseconds",
                         type=int, default=100)

@@ -26,7 +26,7 @@ def btcp_file_transfer_client():
     parser = argparse.ArgumentParser()
     parser.add_argument("-w", "--window",
                         help="Define bTCP window size",
-                        type=int, default=100)
+                        type=int, default=70)
     parser.add_argument("-t", "--timeout",
                         help="Define bTCP timeout in milliseconds",
                         type=int, default=100)
@@ -37,13 +37,13 @@ def btcp_file_transfer_client():
 
     # Create a bTCP client socket with the given window size and timeout value
     s = BTCPClientSocket(args.window, args.timeout)
-    s.connect()
-    f = open("../large_input.py")
-    s.send(f)
-    s.shutdown()
+    
     # TODO Write your file transfer client code using your implementation of
     # BTCPClientSocket's connect, send, and disconnect methods.
-
+    s.connect()
+    f = open("../large_input.py") # f = open(args.input)
+    s.send(f)
+    s.shutdown()
     # Clean up any state
     s.close()
 

@@ -73,6 +73,45 @@ class BTCPServerSocket(BTCPSocket):
         else:
             return 0
 
+    def main_received(self, message, sequence_number, acknowledgement_number, flags, window, data_length, checksum):
+        ACK = super().build_segment_header(
+                        self.sequence_number, self.ack_number,
+                        syn_set=False, ack_set=True, fin_set=False,
+                        window=0x01, length=0, checksum=0)
+
+        if(self.ack_number == sequence_number):
+            self.ack_number = self.next_ack(self.ack_number)
+            
+            self.receive_buffer.append(message[10:10+data_length].decode('utf-8'))
+
+            cleared = 0 
+            for (seq, segment) in self.ordered_receive:
+                if seq == self.ack_number:
+                    self.receive_buffer.append(segment)
+                    self.ack_number = self.next_ack(self.ack_number)
+                    cleared+=1
+                    
+            self.ordered_receive = self.ordered_receive[cleared:]
+                        
+            self._lossy_layer.send_segment(ACK)
+        
+        elif (self.ack_number < sequence_number):
+            # Receive segment and add it to the ordered buffer as tuple with its sequence number
+            self.ordered_receive = insertTupleOrdered( self.ordered_receive, ( sequence_number, message[10:10+data_length].decode('utf-8') ))
+            
+            # Acknowledge previous message
+            self._lossy_layer.send_segment(ACK)
+
+        elif (self.ack_number > sequence_number and (sequence_number == 0 and self.ack_number < 60000 or sequence_number > 0) ):
+            # ACK got lost, reacknowledge (Should not happen, but just in case somehow it does)
+            self._lossy_layer.send_segment(ACK)
+        
+        else:
+            # Wrap numberspace around
+            self._lossy_layer.send_segment(ACK)
+            self.ack_number = 0
+       
+
     ###########################################################################
     ### The following section is the interface between the transport layer  ###
     ### and the lossy (network) layer. When a segment arrives, the lossy    ###
@@ -133,55 +172,8 @@ class BTCPServerSocket(BTCPSocket):
 
             else:
                 #print(f"ack is {self.ack_number}, receive {sequence_number}")
-
-                if(self.ack_number == sequence_number):
-
-                    self.ack_number = self.next_ack(self.ack_number)
-                    
-                    self.receive_buffer.append(message[10:10+data_length].decode('utf-8'))
-
-                    cleared = 0 
-                    for (seq, segment) in self.ordered_receive:
-                        if seq == self.ack_number:
-                            self.receive_buffer.append(segment)
-                            self.ack_number = self.next_ack(self.ack_number)
-                            cleared+=1
-                            
-                    self.ordered_receive = self.ordered_receive[cleared:]
-
-                    ACK = super().build_segment_header(
-                                self.sequence_number, self.ack_number,
-                                syn_set=False, ack_set=True, fin_set=False,
-                                window=0x01, length=0, checksum=0)
-                                
-                    self._lossy_layer.send_segment(ACK)
-                
-                elif (self.ack_number < sequence_number):
-                    # Receive segment and add it to the ordered buffer as tuple with its sequence number
-                    self.ordered_receive = insertTupleOrdered( self.ordered_receive, ( sequence_number, message[10:10+data_length].decode('utf-8') ))
-                    
-                    # Acknowledge previous message
-                    ACK = super().build_segment_header(
-                                self.sequence_number, self.ack_number,
-                                syn_set=False, ack_set=True, fin_set=False,
-                                window=0x01, length=0, checksum=0)
-                    self._lossy_layer.send_segment(ACK)
-
-                elif (self.ack_number > sequence_number and (sequence_number > 0 and self.ack_number > 10000) ):
-                    ACK = super().build_segment_header(
-                                self.sequence_number, self.ack_number,
-                                syn_set=False, ack_set=True, fin_set=False,
-                                window=0x01, length=0, checksum=0)
-                    self._lossy_layer.send_segment(ACK)
-                
-                else:
-                    ACK = super().build_segment_header(
-                                self.sequence_number, self.ack_number,
-                                syn_set=False, ack_set=True, fin_set=False,
-                                window=0x01, length=0, checksum=0)
-                    self._lossy_layer.send_segment(ACK)
-                    self.ack_number = 0
-
+                #if ( super().in_cksum(message) == 65535 ):
+                self.main_received(message, sequence_number, acknowledgement_number, flags, window, data_length, checksum)
 
         elif (self.state == BTCPStates.CLOSING):
             if (flag_bits[2] == "1"):
@@ -277,8 +269,6 @@ class BTCPServerSocket(BTCPSocket):
         boolean or enum has the expected value. We do not think you will need
         more advanced thread synchronization in this project.
         """
-        
-        #STILL HAVE TO HANDLE WINDOW AND CHECKSUM
 
         # Update state and lock mutex
         self.state = BTCPStates.ACCEPTING
