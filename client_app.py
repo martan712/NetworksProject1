@@ -41,7 +41,7 @@ def btcp_file_transfer_client():
     # TODO Write your file transfer client code using your implementation of
     # BTCPClientSocket's connect, send, and disconnect methods.
     s.connect()
-    f = open("../large_input.py") # f = open(args.input)
+    f = open(args.input)
     s.send(f)
     s.shutdown()
     # Clean up any state
