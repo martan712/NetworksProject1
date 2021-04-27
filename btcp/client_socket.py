@@ -77,14 +77,14 @@ class BTCPClientSocket(BTCPSocket):
 
 
     def sendAllSegements(self):
-        while( len(self.unacked_list) < self.windowsize):
+        while( len(self.unacked_list) < self.windowsize and self.send_buffer.qsize()>0):
             segment = self.send_buffer.get()
             self._lossy_layer.send_segment(segment)
             self.unacked_list.append(segment)
 
             sequence_number, acknowledgement_number, flags, window, data_length, checksum= super().unpack_segment_header(segment[:10])
             #print(f"sent {sequence_number}")   
-
+        
     def next_sequence_nr(self, sequence_nr):
         if sequence_nr < 65534:
             return sequence_nr+1
@@ -119,7 +119,6 @@ class BTCPClientSocket(BTCPSocket):
 
         Remember, we expect you to implement this *as a state machine!*
         """
-
         # The unpacking of the segment message and the segment header
         message = segment[0]
         sequence_number, acknowledgement_number, flags, window, data_length, checksum= super().unpack_segment_header(message[:10])
@@ -212,6 +211,8 @@ class BTCPClientSocket(BTCPSocket):
                 sequence_number, acknowledgement_number, flags, window, data_length, checksum= super().unpack_segment_header(self.unacked_list[0][:10])
                 #print(f"Resent package {sequence_number}")         
  
+            elif ( self.send_buffer.qsize()> 0):
+                self.sendAllSegements()
     ###########################################################################
     ### You're also building the socket API for the applications to use.    ###
     ### The following section is the interface between the application      ###
@@ -342,17 +343,11 @@ class BTCPClientSocket(BTCPSocket):
                     syn_set=False, ack_set=False, fin_set=False,
                     window=0x01, length=len(message), checksum=checksum)
             
-            segment = io.BytesIO()
-            segment.write(header2)
-            segment.write(message)
-
-            if (super().in_cksum(segment.getvalue()) != 0xFFFF):
-                print(header)
-                print(header2)
-                print("WTFF!!!!!")
+            segment= bytearray(segment.getvalue())
+            segment[:10] = header2
 
             # Add segment to buffer
-            self.send_buffer.put(segment.getvalue())
+            self.send_buffer.put(segment)
 
             # Increase sequence number
             self.sequence_number = self.next_sequence_nr(self.sequence_number)
@@ -376,7 +371,6 @@ class BTCPClientSocket(BTCPSocket):
         more advanced thread synchronization in this project.
         """
 
-        print("client initiates shutdown")
         # Create FIN and ACK packages
         FIN = super().build_segment_header(
                             self.sequence_number, self.ack_number,
@@ -393,13 +387,16 @@ class BTCPClientSocket(BTCPSocket):
         self._lossy_layer.send_segment(FIN)
         self.mutex = False
 
-        # Wait for response from server
-        while (self.mutex == False):
-            continue
+        #Doesn't work commented for now!
+        # # Wait for response from server
+        # while (self.mutex == False):
+        #     self._lossy_layer.send_segment(FIN)
+        #     time.sleep(0.1)
+        #     continue
 
-        # Update state and send package
-        self.state = BTCPStates.CLOSED
-        self._lossy_layer.send_segment(ACK)
+        # # Update state and send package
+        # self.state = BTCPStates.CLOSED
+        # self._lossy_layer.send_segment(ACK)
         print("client shutdown")
 
 
@@ -420,6 +417,7 @@ class BTCPClientSocket(BTCPSocket):
             2. if so, destroy the resource.
             3. set the reference to None.
         """
+
         if self._lossy_layer is not None:
             self._lossy_layer.destroy()
         self._lossy_layer = None

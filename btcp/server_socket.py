@@ -65,6 +65,10 @@ class BTCPServerSocket(BTCPSocket):
         self.ordered_receive = []
 
         self.windowsize = 70
+
+        # Retries
+        self.max_r = 10
+        self.shutdown_r = 0
         
 
     def next_ack(self, ack):
@@ -170,6 +174,7 @@ class BTCPServerSocket(BTCPSocket):
                 self.mutex = True
 
         elif (self.state == BTCPStates.ESTABLISHED):
+            
             if (flag_bits[2] == "1"):
                 FINACK = super().build_segment_header(
                                 self.sequence_number, self.ack_number,
@@ -228,7 +233,15 @@ class BTCPServerSocket(BTCPSocket):
             self._lossy_layer.send_segment(SYNACK)
 
         elif (self.state == BTCPStates.CLOSING):
-            self.state=BTCPStates.CLOSED
+            if( self.shutdown_r < self.max_r):
+                FINACK = super().build_segment_header(
+                                    self.sequence_number, self.ack_number,
+                                    syn_set=False, ack_set=True, fin_set=True,
+                                    window=0x01, length=0, checksum=0)
+                self._lossy_layer.send_segment(FINACK)
+                self.shutdown_r +=1
+            else:
+                self.state = BTCPStates.CLOSED
 
     ###########################################################################
     ### You're also building the socket API for the applications to use.    ###
@@ -336,7 +349,7 @@ class BTCPServerSocket(BTCPSocket):
 
         Again, you should feel free to deviate from how this usually works.
         """
-        while ( len(self.receive_buffer) < 1 and self.state == BTCPStates.ESTABLISHED):
+        while ( len(self.receive_buffer) < 1 and self.state != BTCPStates.CLOSED):
             time.sleep(0.1)
             continue
 
