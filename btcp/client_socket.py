@@ -356,8 +356,6 @@ class BTCPClientSocket(BTCPSocket):
 
             # Increase sequence number
             self.sequence_number = self.next_sequence_nr(self.sequence_number)
-
-            print("done adding to buffer")
         while (self.send_buffer.qsize() > 0):
             time.sleep(0.1)
             continue

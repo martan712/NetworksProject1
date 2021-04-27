@@ -179,7 +179,6 @@ class BTCPServerSocket(BTCPSocket):
                 self._lossy_layer.send_segment(FINACK)
 
             else:
-                print(f"ack is {self.ack_number}, receive {sequence_number}")
                 self.main_received(message, sequence_number, acknowledgement_number, flags, window, data_length, checksum)
 
         elif (self.state == BTCPStates.CLOSING):
