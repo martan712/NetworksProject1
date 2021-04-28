@@ -318,6 +318,9 @@ class BTCPClientSocket(BTCPSocket):
             
             message = bytearray(message, 'utf-8')
 
+            # Message length save
+            mlen = len(message)
+
             # Padding
             if( len(message) < 1008 ):
                 message = message + b'\x00'*(1008-len(message) )
@@ -329,7 +332,7 @@ class BTCPClientSocket(BTCPSocket):
             header = super().build_segment_header(
                     self.sequence_number, thisack,
                     syn_set=False, ack_set=False, fin_set=False,
-                    window=0x01, length=len(message), checksum=0)
+                    window=0x01, length=mlen, checksum=0)
 
             segment = io.BytesIO()
             segment.write(header)
@@ -341,7 +344,7 @@ class BTCPClientSocket(BTCPSocket):
             header2 = super().build_segment_header(
                     self.sequence_number, thisack,
                     syn_set=False, ack_set=False, fin_set=False,
-                    window=0x01, length=len(message), checksum=checksum)
+                    window=0x01, length=mlen, checksum=checksum)
             
             segment= bytearray(segment.getvalue())
             segment[:10] = header2
@@ -388,15 +391,15 @@ class BTCPClientSocket(BTCPSocket):
         self.mutex = False
 
         #Doesn't work commented for now!
-        # # Wait for response from server
-        # while (self.mutex == False):
-        #     self._lossy_layer.send_segment(FIN)
-        #     time.sleep(0.1)
-        #     continue
+        # Wait for response from server
+        while (self.mutex == False):
+            self._lossy_layer.send_segment(FIN)
+            time.sleep(0.1)
+            continue
 
-        # # Update state and send package
-        # self.state = BTCPStates.CLOSED
-        # self._lossy_layer.send_segment(ACK)
+        # Update state and send package
+        self.state = BTCPStates.CLOSED
+        self._lossy_layer.send_segment(ACK)
         print("client shutdown")
 
 

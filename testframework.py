@@ -117,101 +117,105 @@ class TestbTCPFramework(unittest.TestCase):
         # client sends content to server
         
         # server receives content from client
+
+        # content received by server matches the content sent by client
+        assert filecmp.cmp(INPUTFILE, OUTPUTFILE, shallow=False)
+
+
+    def test_flipping_network(self):
+        """reliability over network with bit flips 
+        (which sometimes results in lower layer packet loss)"""
+        # setup environment
+        run_command(NETEM_CHANGE.format(NETEM_CORRUPT))
+        
+        # launch localhost client connecting to server
+        run_command_with_output("python3 client_app.py -w {} -t {} -i {}".format(WINSIZE, TIMEOUT, INPUTFILE))
+        # client sends content to server
+        
+        # server receives content from client
         
         # content received by server matches the content sent by client
         assert filecmp.cmp(INPUTFILE, OUTPUTFILE)
 
 
-#     def test_flipping_network(self):
-#         """reliability over network with bit flips 
-#         (which sometimes results in lower layer packet loss)"""
-#         # setup environment
-#         run_command(NETEM_CHANGE.format(NETEM_CORRUPT))
+    def test_duplicates_network(self):
+        """reliability over network with duplicate packets"""
+        # setup environment
+        run_command(NETEM_CHANGE.format(NETEM_DUP))
         
-#         # launch localhost client connecting to server
+        # launch localhost client connecting to server
+        run_command_with_output("python3 client_app.py -w {} -t {} -i {}".format(WINSIZE, TIMEOUT, INPUTFILE))
+        # client sends content to server
         
-#         # client sends content to server
+        # server receives content from client
         
-#         # server receives content from client
-        
-#         # content received by server matches the content sent by client
+        # content received by server matches the content sent by client
+        assert filecmp.cmp(INPUTFILE, OUTPUTFILE)
 
 
-#     def test_duplicates_network(self):
-#         """reliability over network with duplicate packets"""
-#         # setup environment
-#         run_command(NETEM_CHANGE.format(NETEM_DUP))
+    def test_lossy_network(self):
+        """reliability over network with packet loss"""
+        # setup environment
+        run_command(NETEM_CHANGE.format(NETEM_LOSS))
         
-#         # launch localhost client connecting to server
+        # launch localhost client connecting to server
+        run_command_with_output("python3 client_app.py -w {} -t {} -i {}".format(WINSIZE, TIMEOUT, INPUTFILE))
+        # client sends content to server
         
-#         # client sends content to server
+        # server receives content from client
         
-#         # server receives content from client
-        
-#         # content received by server matches the content sent by client
+        # content received by server matches the content sent by client
+        assert filecmp.cmp(INPUTFILE, OUTPUTFILE)
 
 
-#     def test_lossy_network(self):
-#         """reliability over network with packet loss"""
-#         # setup environment
-#         run_command(NETEM_CHANGE.format(NETEM_LOSS))
+    def test_reordering_network(self):
+        """reliability over network with packet reordering"""
+        # setup environment
+        run_command(NETEM_CHANGE.format(NETEM_REORDER))
         
-#         # launch localhost client connecting to server
+        # launch localhost client connecting to server
+        run_command_with_output("python3 client_app.py -w {} -t {} -i {}".format(WINSIZE, TIMEOUT, INPUTFILE))
+        # client sends content to server
         
-#         # client sends content to server
+        # server receives content from client
         
-#         # server receives content from client
-        
-#         # content received by server matches the content sent by client
+        # content received by server matches the content sent by client
+        assert filecmp.cmp(INPUTFILE, OUTPUTFILE)
 
 
-#     def test_reordering_network(self):
-#         """reliability over network with packet reordering"""
-#         # setup environment
-#         run_command(NETEM_CHANGE.format(NETEM_REORDER))
+    # def test_delayed_network(self):
+    #     """reliability over network with delay relative to the timeout value"""
+    #     # setup environment
+    #     run_command(NETEM_CHANGE.format(NETEM_DELAY))
         
-#         # launch localhost client connecting to server
+    #     # launch localhost client connecting to server
+    #     run_command_with_output("python3 client_app.py -w {} -t {} -i {}".format(WINSIZE, TIMEOUT, INPUTFILE))
+    #     # client sends content to server
         
-#         # client sends content to server
+    #     # server receives content from client
         
-#         # server receives content from client
-        
-#         # content received by server matches the content sent by client
+    #     # content received by server matches the content sent by client
+    #     assert filecmp.cmp(INPUTFILE, OUTPUTFILE)
 
+    def test_allbad_network(self):
+        """reliability over network with all of the above problems"""
 
-#     def test_delayed_network(self):
-#         """reliability over network with delay relative to the timeout value"""
-#         # setup environment
-#         run_command(NETEM_CHANGE.format(NETEM_DELAY))
+        # setup environment
+        #run_command(NETEM_CHANGE.format(NETEM_ALL))
         
-#         # launch localhost client connecting to server
+        # launch localhost client connecting to server
+        run_command_with_output("python3 client_app.py -w {} -t {} -i {}".format(WINSIZE, TIMEOUT, INPUTFILE))
+        # client sends content to server
         
-#         # client sends content to server
+        # server receives content from client
         
-#         # server receives content from client
-        
-#         # content received by server matches the content sent by client
-
-
-#     def test_allbad_network(self):
-#         """reliability over network with all of the above problems"""
-
-#         # setup environment
-#         #run_command(NETEM_CHANGE.format(NETEM_ALL))
-        
-#         # launch localhost client connecting to server
-#         run_command_with_output("python3 client_app.py -w {} -t {} -i {}".format(WINSIZE, TIMEOUT, INPUTFILE))
-#         # client sends content to server
-        
-#         # server receives content from client
-        
-#         # content received by server matches the content sent by client   
-#         assert filecmp.cmp(INPUTFILE, OUTPUTFILE)
+        # content received by server matches the content sent by client   
+        assert filecmp.cmp(INPUTFILE, OUTPUTFILE)
   
-# #    def test_command(self):
-# #        #command=['dir','.']
-# #        out = run_command_with_output("dir .")
-# #        print(out)
+#    def test_command(self):
+#        #command=['dir','.']
+#        out = run_command_with_output("dir .")
+#        print(out)
         
 
 if __name__ == "__main__":
