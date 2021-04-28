@@ -77,32 +77,35 @@ class BTCPClientSocket(BTCPSocket):
 
 
     def sendAllSegements(self):
+        # while the unacked list is smaller than the window size and we still need to send packets
         while( len(self.unacked_list) < self.windowsize and self.send_buffer.qsize()>0):
+            # get next packet and add it to list of unacknowledged packets
             segment = self.send_buffer.get()
             self._lossy_layer.send_segment(segment)
-            self.unacked_list.append(segment)
-
-            sequence_number, acknowledgement_number, flags, window, data_length, checksum= super().unpack_segment_header(segment[:10])
-            #print(f"sent {sequence_number}")   
+            self.unacked_list.append(segment)  
         
     def next_sequence_nr(self, sequence_nr):
+        # get next sequence number we need
         if sequence_nr < 65534:
             return sequence_nr+1
         else:
             return 0
 
     def handle_triple_ack(self, acknowledgement_number):
+        # if we get the same acknowledgement number
         if (acknowledgement_number == self.previous_ack):
+            # increase the times we got this ack number
             self.same_ack_times += 1
         else:
+            # reset ack counter and set new previous_ack
             self.previous_ack = acknowledgement_number
             self.same_ack_times = 1
 
+        # if we get the same acknowledgement number three times
         if (self.same_ack_times == 3):
-            sequence_number, acknowledgement_number, flags, window, data_length, checksum= super().unpack_segment_header(self.unacked_list[0][:10])
-            #print(f"resend {sequence_number} because triple ack")
+            # reset first unacked packet
             self._lossy_layer.send_segment(self.unacked_list[0])
-            
+            # reset ack counter
             self.same_ack_times = 0
 
     def lossy_layer_segment_received(self, segment):           
@@ -142,16 +145,15 @@ class BTCPClientSocket(BTCPSocket):
         elif (self.state == BTCPStates.ESTABLISHED):
             # IF ACK is set
             if (flag_bits[1] == "1"):
-                #print(f"received ack nr {acknowledgement_number} with current own ack = {self.ack_number}")
-                # If ACK_server > ACK_client
+                # If we get a greater acknowledgement number
                 if (acknowledgement_number >= self.next_sequence_nr(self.ack_number)):
                     # Remove those that can be removed and update ACK_client
                     self.unacked_list = self.unacked_list[(acknowledgement_number - self.ack_number):]
                     self.ack_number=acknowledgement_number
 
-                #else:
-                    # Otherwise we can't use it. Make sure at most 3 same ACKS
-                    #self.handle_triple_ack(acknowledgement_number)
+                else:
+                    # Handle ack we previously got
+                    self.handle_triple_ack(acknowledgement_number)
 
                 self.sendAllSegements()
 
@@ -207,9 +209,6 @@ class BTCPClientSocket(BTCPSocket):
             # If timeout, resend oldest package, if we have one
             if( len(self.unacked_list) > 0):
                 self._lossy_layer.send_segment(self.unacked_list[0])     
-
-                sequence_number, acknowledgement_number, flags, window, data_length, checksum= super().unpack_segment_header(self.unacked_list[0][:10])
-                #print(f"Resent package {sequence_number}")         
  
             elif ( self.send_buffer.qsize()> 0):
                 self.sendAllSegements()
@@ -280,7 +279,7 @@ class BTCPClientSocket(BTCPSocket):
         self._lossy_layer.send_segment(ACK)
 
         # Show user that the client has connected.
-        print("client connected")
+        print("Client socket connected.")
 
     def send(self, data):
         """Send data originating from the application in a reliable way to the
@@ -400,7 +399,7 @@ class BTCPClientSocket(BTCPSocket):
         # Update state and send package
         self.state = BTCPStates.CLOSED
         self._lossy_layer.send_segment(ACK)
-        print("client shutdown")
+        print("Client socket has shutdown.")
 
 
     def close(self):

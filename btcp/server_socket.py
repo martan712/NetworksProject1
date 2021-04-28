@@ -5,6 +5,7 @@ from btcp.constants import *
 import time
 
 def insertTupleOrdered(someArray, element):
+    # inserts tuple into an ordered list at the right position, based on the key value of the tuple
     for index in range(len(someArray)):
         if (someArray[index][0] > element[0]):
             return someArray[:index] + [element] + someArray[index:]
@@ -67,37 +68,46 @@ class BTCPServerSocket(BTCPSocket):
         self.windowsize = 70
 
         # Retries
-        self.max_r = 10
+        self.max_r = 5
         self.shutdown_r = 0
         
 
     def next_ack(self, ack):
+        # finds next acknowledgement number
         if ack < 65534:
             return ack+1
         else:
             return 0
 
     def main_received(self, message, sequence_number, acknowledgement_number, flags, window, data_length, checksum):
+        # builds generic acknowledgement for received message
         ACK = super().build_segment_header(
                         self.sequence_number, self.ack_number,
                         syn_set=False, ack_set=True, fin_set=False,
                         window=0x01, length=0, checksum=0)
-
+        
+        # if the checksum succeeds
         if (super().in_cksum(message) == 0xFFFF):
+            # if the received sequence number is exactly equal to the expected acknowledgement number
             if(self.ack_number == sequence_number):
+                # increase the expected acknowledgenumber 
                 self.ack_number = self.next_ack(self.ack_number)
                 
+                # add message to receive buffer
                 self.receive_buffer.append(message[10:10+data_length].decode('utf-8'))
 
+                # clear ordered receive buffer until we miss a packet again
                 cleared = 0 
                 for (seq, segment) in self.ordered_receive:
                     if seq == self.ack_number:
                         self.receive_buffer.append(segment)
                         self.ack_number = self.next_ack(self.ack_number)
                         cleared+=1
-                        
+
+                # delete all these packets out of the ordered receive buffer at once        
                 self.ordered_receive = self.ordered_receive[cleared:]
                 
+                # build new acknowledgement since ack number might have increased
                 ACK = super().build_segment_header(
                         self.sequence_number, self.ack_number,
                         syn_set=False, ack_set=True, fin_set=False,
@@ -121,7 +131,7 @@ class BTCPServerSocket(BTCPSocket):
                 self._lossy_layer.send_segment(ACK)
                 self.ack_number = 0
         else:
-            print("checksum failed")
+            print("Checksum failed.")
             self._lossy_layer.send_segment(ACK)
 
     ###########################################################################
@@ -174,7 +184,7 @@ class BTCPServerSocket(BTCPSocket):
                 self.mutex = True
 
         elif (self.state == BTCPStates.ESTABLISHED):
-            
+            # if FIN is received
             if (flag_bits[2] == "1"):
                 FINACK = super().build_segment_header(
                                 self.sequence_number, self.ack_number,
@@ -187,6 +197,7 @@ class BTCPServerSocket(BTCPSocket):
                 self.main_received(message, sequence_number, acknowledgement_number, flags, window, data_length, checksum)
 
         elif (self.state == BTCPStates.CLOSING):
+            # if FIN is received
             if (flag_bits[2] == "1"):
                 FINACK = super().build_segment_header(
                                 self.sequence_number, self.ack_number,
@@ -194,6 +205,7 @@ class BTCPServerSocket(BTCPSocket):
                                 window=0x01, length=0, checksum=0)
                 self._lossy_layer.send_segment(FINACK)
                 
+            # if ACK is received
             elif (flag_bits[1] == "1"):
                 self.state = BTCPStates.CLOSED
 
@@ -220,9 +232,6 @@ class BTCPServerSocket(BTCPSocket):
         """
         
         # STATE MACHINE
-        # if (self.state == BTCPStates.ACCEPTING):
-        #     self.state=BTCPStates.CLOSED
-
         if (self.state == BTCPStates.SYN_RCVD):
             
             SYNACK = super().build_segment_header(
@@ -233,6 +242,7 @@ class BTCPServerSocket(BTCPSocket):
             self._lossy_layer.send_segment(SYNACK)
 
         elif (self.state == BTCPStates.CLOSING):
+            # shutdown after max retry of sending FINACK
             if( self.shutdown_r < self.max_r):
                 FINACK = super().build_segment_header(
                                     self.sequence_number, self.ack_number,
@@ -316,7 +326,7 @@ class BTCPServerSocket(BTCPSocket):
         self.state = BTCPStates.ESTABLISHED
 
         # Show user server has connected
-        print("server connected")
+        print("Server connected.")
 
     def recv(self):
         """Return data that was received from the client to the application in

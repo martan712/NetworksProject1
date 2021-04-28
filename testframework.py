@@ -117,6 +117,7 @@ class TestbTCPFramework(unittest.TestCase):
         # client sends content to server
         
         # server receives content from client
+        time.sleep(1)
 
         # content received by server matches the content sent by client
         assert filecmp.cmp(INPUTFILE, OUTPUTFILE, shallow=False)
@@ -133,7 +134,7 @@ class TestbTCPFramework(unittest.TestCase):
         # client sends content to server
         
         # server receives content from client
-        
+        time.sleep(1)
         # content received by server matches the content sent by client
         assert filecmp.cmp(INPUTFILE, OUTPUTFILE)
 
@@ -148,7 +149,7 @@ class TestbTCPFramework(unittest.TestCase):
         # client sends content to server
         
         # server receives content from client
-        
+        time.sleep(1)
         # content received by server matches the content sent by client
         assert filecmp.cmp(INPUTFILE, OUTPUTFILE)
 
@@ -163,7 +164,7 @@ class TestbTCPFramework(unittest.TestCase):
         # client sends content to server
         
         # server receives content from client
-        
+        time.sleep(1)
         # content received by server matches the content sent by client
         assert filecmp.cmp(INPUTFILE, OUTPUTFILE)
 
@@ -178,24 +179,24 @@ class TestbTCPFramework(unittest.TestCase):
         # client sends content to server
         
         # server receives content from client
-        
+        time.sleep(1)
         # content received by server matches the content sent by client
         assert filecmp.cmp(INPUTFILE, OUTPUTFILE)
 
 
-    # def test_delayed_network(self):
-    #     """reliability over network with delay relative to the timeout value"""
-    #     # setup environment
-    #     run_command(NETEM_CHANGE.format(NETEM_DELAY))
+    def test_delayed_network(self):
+        """reliability over network with delay relative to the timeout value"""
+        # setup environment
+        run_command(NETEM_CHANGE.format(NETEM_DELAY))
         
-    #     # launch localhost client connecting to server
-    #     run_command_with_output("python3 client_app.py -w {} -t {} -i {}".format(WINSIZE, TIMEOUT, INPUTFILE))
-    #     # client sends content to server
+        # launch localhost client connecting to server
+        run_command_with_output("python3 client_app.py -w {} -t {} -i {}".format(WINSIZE, TIMEOUT, INPUTFILE))
+        # client sends content to server
         
-    #     # server receives content from client
-        
-    #     # content received by server matches the content sent by client
-    #     assert filecmp.cmp(INPUTFILE, OUTPUTFILE)
+        # server receives content from client
+        time.sleep(1)
+        # content received by server matches the content sent by client
+        assert filecmp.cmp(INPUTFILE, OUTPUTFILE)
 
     def test_allbad_network(self):
         """reliability over network with all of the above problems"""
@@ -208,7 +209,7 @@ class TestbTCPFramework(unittest.TestCase):
         # client sends content to server
         
         # server receives content from client
-        
+        time.sleep(1)
         # content received by server matches the content sent by client   
         assert filecmp.cmp(INPUTFILE, OUTPUTFILE)
   

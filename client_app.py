@@ -45,6 +45,7 @@ def btcp_file_transfer_client():
     s.send(f)
     s.shutdown()
     # Clean up any state
+    f.close()
     s.close()
 
 
